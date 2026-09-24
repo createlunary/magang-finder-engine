@@ -1,0 +1,30 @@
+{
+  "bidang_minat": [
+    "backend development",
+    "game development (Unreal Engine 5)",
+    "machine learning / NLP",
+    "software engineering umum"
+  ],
+  "skill_teknis": {
+    "bahasa_pemrograman": ["C++", "Python", "JavaScript"],
+    "framework_tools": ["Unreal Engine 5", "Node.js"],
+    "bidang_kuliah_relevan": ["Deep Learning", "Pemrosesan Bahasa Alami", "Rekayasa Perangkat Lunak", "Rekayasa Web"]
+  },
+  "preferensi": {
+    "lokasi": ["remote", "Yogyakarta"],
+    "tipe": ["magang bersertifikat", "magang berbayar"],
+    "durasi_minimum_bulan": 3
+  },
+  "must_have": [
+    "requirement dan deskripsi kerja jelas",
+    "ada pembimbing/mentor di tempat magang"
+  ],
+  "nice_to_have": [
+    "peluang lanjut jadi kerja penuh waktu",
+    "tim dengan proyek AI/ML atau game dev"
+  ],
+  "red_flags": [
+    "tidak ada kompensasi/sertifikat sama sekali dan deskripsi kerja tidak jelas",
+    "perusahaan tidak terverifikasi / tidak ada jejak digital"
+  ]
+}

@@ -1,0 +1,184 @@
+# Daftar sumber lowongan. Asal: docs/sumber_lowongan_kerja.csv
+#
+# jenis:
+#   connector — lewat custom browser search connector (C:\Tools\AI\Search\sr.py)
+#   jooble | adzuna | careerjet — API resmi, butuh key di .env
+#   dealls | kalibrr | techinasia — API publik yang dipakai situsnya sendiri (tanpa key, tanpa browser)
+#
+# Kolom connector:
+#   url_cari        {q} diganti kata kunci (sudah di-URL-encode)
+#   selector_daftar selector CSS halaman daftar. WAJIB untuk halaman berisi banyak
+#                   <article>: tanpa ini connector hanya mengambil <article> pertama.
+#   tunggu          selector yang ditunggu sebelum halaman dibaca (untuk isi yang dirender JS)
+#   pola_detail     regex tautan halaman detail lowongan
+#   selector_detail opsional; tanpa ini connector memakai ekstraksi otomatis
+#   kata_kunci      opsional; menimpa kata_kunci di settings.yaml
+#
+# status: diuji 2026-09-23 lewat `python mf.py uji-sumber <nama>`
+
+sumber:
+  # ---------------------------------------------------------------- API resmi
+  - nama: jooble
+    jenis: jooble
+    aktif: true
+    domain: id.jooble.org   # key harus didaftarkan di domain yang sama (https://id.jooble.org/api/about)
+    lokasi: [Yogyakarta, Sleman, Bantul, Remote]
+    # Kata kunci umum: pencarian Jooble longgar, saring judul IT di pipeline yang memilah.
+    kata_kunci: [magang, intern, internship, magang IT, magang programmer, software engineer intern]
+    catatan: "Agregator (Pintarnya, Workable, dll). Daftar via API, isi via halaman detail + JSON-LD. ✅ diuji 2026-09-24."
+
+  - nama: adzuna
+    jenis: adzuna
+    aktif: false            # aktifkan setelah key diisi di .env
+    negara: [sg]            # Adzuna belum mendukung Indonesia; SG untuk lowongan remote/regional
+    kata_kunci: [software intern, machine learning intern, backend intern]
+    catatan: "Butuh ADZUNA_APP_ID + ADZUNA_APP_KEY. Batas gratis 250 panggilan/hari."
+
+  - nama: careerjet
+    jenis: careerjet
+    aktif: false            # aktifkan setelah key diisi di .env
+    locale: id_ID
+    catatan: "Butuh CAREERJET_AFFID."
+
+  # ----------------------------------------------------- job board (connector)
+  - nama: jobstreet
+    jenis: connector
+    aktif: true
+    # Kategori ICT + lokasi langsung di URL. Halaman detail JobStreet tidak
+    # menyebut "remote", jadi konteks itu dibawa dari filter pencarian.
+    kata_kunci: [magang, intern]
+    pencarian:
+      - url: "https://id.jobstreet.com/id/{q_slug}-jobs-in-information-communication-technology/in-Yogyakarta"
+        lokasi: DI Yogyakarta
+      - url: "https://id.jobstreet.com/id/{q_slug}-jobs-in-information-communication-technology/remote"
+        tipe_kerja: remote
+    selector_daftar: body
+    pola_detail: '/id/job/\d+'
+    # Atribut data-automation SEEK; memuat jenis kerja ("Full time") secara eksplisit.
+    selector_detail: >-
+      [data-automation="job-detail-title"], [data-automation="advertiser-name"],
+      [data-automation="job-detail-location"], [data-automation="job-detail-work-type"],
+      [data-automation="job-detail-classifications"], [data-automation="job-detail-salary"],
+      [data-automation="jobAdDetails"]
+    catatan: "30 lowongan per halaman. ✅ diuji."
+
+  - nama: glints
+    jenis: connector
+    aktif: true
+    # jobTypes=INTERNSHIP menjamin hasilnya magang (saringan judul dilewati).
+    pencarian:
+      - url: "https://glints.com/id/opportunities/jobs/explore?country=ID&jobTypes=INTERNSHIP&locationId=dadb256b-8716-4fae-b7bf-f85d922d0df3&locationName=DI+Yogyakarta&lowestLocationLevel=2"
+        lokasi: DI Yogyakarta
+        jenis: magang
+      - url: "https://glints.com/id/opportunities/jobs/explore?keyword={q}&country=ID&jobTypes=INTERNSHIP&workArrangementOptions=REMOTE"
+        tipe_kerja: remote
+        jenis: magang
+    kata_kunci: [programmer, developer, software engineer, data, machine learning, game]
+    maks_detail: 40           # inventori magang remote + DIY paling besar di sini
+    selector_daftar: body
+    pola_detail: '/id/opportunities/jobs/[^/)\s]+/[0-9a-f-]{36}'
+    # `main` juga memuat "Lowongan Lainnya Untukmu" — hanya bagian lowongan ini yang diambil.
+    selector_detail: >-
+      h1, [class*="JobOverViewInfoContainer"], [class*="JobRequirementsContainer"],
+      [class*="SkillsContainer"], [class*="JobDescriptionContainer"], [class*="CompanyContainer"]
+    catatan: "✅ diuji."
+
+  - nama: kalibrr
+    jenis: kalibrr          # API job board publik; deskripsi lengkap sudah ada di respons daftar
+    aktif: true
+    kota: [Yogyakarta, Sleman, Bantul]   # WFH selalu ikut; kosongkan untuk semua kota
+    catatan: "±1.200 lowongan se-Indonesia, disaring kota/WFH + magang. ✅ diuji 2026-09-24."
+
+  - nama: karirhub
+    jenis: connector
+    aktif: true
+    # Pencarian kata kunci Karirhub hanya jalan di sisi klien (datang kosong ke
+    # connector), jadi yang dipakai filter kategori "Magang" yang dirender server.
+    url_cari: "https://karirhub.kemnaker.go.id/lowongan-dalam-negeri/lowongan?jobFunctions[0][id]=6e3c4ca7-9d02-33c1-366e-e8180e482b3a&jobFunctions[0][label]=Magang"
+    selector_daftar: body
+    tunggu: 'a[href*="/lowongan-dalam-negeri/lowongan/"]'
+    pola_detail: '/lowongan-dalam-negeri/lowongan/[^/)?\s]+-[0-9a-f]{8}-[0-9a-f-]{27}'
+    kata_kunci: [magang]      # hanya supaya daftar diambil sekali
+    catatan: "Portal Kemnaker (SIAPkerja)."
+
+  - nama: dealls
+    jenis: dealls           # API publik yang dipakai situsnya sendiri; browser otomasi diberi 404
+    aktif: true
+    kota: [Yogyakarta, Sleman, Bantul]   # remote selalu ikut; kosongkan untuk semua kota
+    catatan: "Semua lowongan magang Dealls, disaring kota. ✅ diuji 2026-09-24."
+
+  - nama: lokerid
+    jenis: connector
+    aktif: true
+    # Pencarian ?q=&lokasi= mengabaikan lokasi. Halaman tipe "magang" (se-Indonesia, ±6
+    # halaman) + pola_detail yang hanya menerima URL berakhiran lokasi DIY — slug lowongan
+    # Loker.id selalu diakhiri nama kota (…-damirich-group-sleman.html).
+    pencarian:
+      - url: "https://www.loker.id/tipe-pekerjaan/magang"
+        jenis: magang
+      - url: "https://www.loker.id/tipe-pekerjaan/magang/page/2"
+        jenis: magang
+      - url: "https://www.loker.id/tipe-pekerjaan/magang/page/3"
+        jenis: magang
+      - url: "https://www.loker.id/tipe-pekerjaan/magang/page/4"
+        jenis: magang
+      - url: "https://www.loker.id/tipe-pekerjaan/magang/page/5"
+        jenis: magang
+      - url: "https://www.loker.id/tipe-pekerjaan/magang/page/6"
+        jenis: magang
+    selector_daftar: body
+    pola_detail: '/[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+-(yogyakarta|sleman|bantul|kulon-progo|gunungkidul|gunung-kidul|wates|remote|wfh)(-\d+)?\.html'
+    catatan: "Situs lokal, banyak UMKM Jogja. Detail punya JSON-LD JobPosting. ✅ diuji 2026-09-24."
+
+  - nama: techinasia
+    jenis: techinasia       # Algolia publik halaman /jobs/search; deskripsi lengkap di tiap record
+    aktif: true
+    kota: [Yogyakarta, Sleman, Bantul]   # remote selalu ikut; kosongkan untuk semua kota
+    catatan: "Startup/tech, ±300 lowongan se-Asia. ✅ diuji 2026-09-24."
+
+  - nama: kitalulus
+    jenis: connector
+    aktif: true
+    # Filter jalur URL bisa digabung: tipe magang × provinsi DIY.
+    pencarian:
+      - url: "https://www.kitalulus.com/lowongan/type-magang/in-provinsi-di-yogyakarta"
+        lokasi: DI Yogyakarta
+        jenis: magang
+    selector_daftar: body
+    pola_detail: '/lowongan/detail/[a-z0-9-]+'
+    catatan: "Banyak UMKM & startup lokal. ✅ diuji 2026-09-24."
+
+  - nama: karir
+    jenis: connector
+    aktif: false
+    url_cari: "https://karir.com/search-lowongan?keyword={q}"
+    catatan: >-
+      Data lewat API gateway2-beta.karir.com (POST v2/search/opportunities), tapi seluruh
+      situs hanya ±190 lowongan dan 0 magang IT di Jogja/remote (2026-09-24). Tidak dibuatkan adapter.
+
+  - nama: topkarir
+    jenis: connector
+    aktif: false
+    url_cari: "https://www.topkarir.com/lowongan?keyword={q}"
+    catatan: "Server menolak koneksi, juga dari luar jaringan ini (2026-09-24). Situs sedang mati."
+
+  - nama: urbanhire
+    jenis: connector
+    aktif: false
+    url_cari: "https://urbanhire.com/explore/jobs?q={q}"
+    catatan: "Cloudflare 530 / origin DNS error (2026-09-23, masih sama 2026-09-24). Situs sedang mati."
+
+  - nama: linkedin
+    jenis: connector
+    aktif: false
+    url_cari: "https://www.linkedin.com/jobs/search/?keywords={q}&location=Indonesia&f_E=1"
+    selector_daftar: body
+    pola_detail: '/jobs/view/\d+'
+    catatan: >-
+      ToS LinkedIn melarang scraping secara eksplisit dan akun bisa kena flag.
+      Nonaktif secara default. Kalau diaktifkan: frekuensi rendah, jangan pakai akun utama.
+
+  # Tidak dimasukkan:
+  # - Google for Jobs: bukan sumber yang bisa ditarik (hanya markup schema.org).
+  # - Indeed: API butuh approval publisher program.
+  # - SIAPkerja: lowongannya dilayani lewat Karirhub (di atas).

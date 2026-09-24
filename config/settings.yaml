@@ -1,0 +1,54 @@
+# Pengaturan umum pipeline. Rahasia (API key, token) TIDAK di sini — taruh di .env.
+
+kata_kunci:            # dipakai semua sumber; tiap sumber boleh menimpa
+  - magang programmer
+  - magang IT
+  - software engineer intern
+  - backend intern
+  - machine learning intern
+  - game developer intern
+
+local_llm:
+  host: http://localhost:11434
+  model: qwen2.5:7b-instruct-q4_K_M     # muat di RTX 4060 8GB
+  num_ctx: 8192
+  maks_karakter_input: 12000            # teks halaman dipotong sebelum masuk model lokal
+  timeout_detik: 180
+  hanya_magang: true                    # buang lowongan full-time/kontrak di filter kasar
+
+embedding:
+  model: bge-m3                         # sama dengan yang dipakai connector
+  ambang_duplikat: 0.93                 # cosine similarity; di atas ini dianggap lowongan yang sama
+
+large_llm:
+  backend: claude-code                  # claude-code (kuota langganan Claude) | api (ANTHROPIC_API_KEY)
+  claude_code:
+    model: opus                         # alias CLI: opus | sonnet
+    timeout_detik: 300
+    path: ""                            # kosong = cari `claude` di PATH
+  model: claude-opus-5                  # untuk backend api; claude-sonnet-5 lebih hemat
+  effort: medium                        # backend api: low | medium | high
+  per_permintaan: 15                    # kandidat per panggilan; CLI memuat ~21k token konteks tiap panggilan, jadi batch besar lebih hemat kuota
+  ambang_skor: 50                       # 0-100; di bawah ini tidak dikirim (dikalibrasi 2026-09-23)
+
+connector:
+  python: python                        # interpreter yang punya dependensi connector
+  sr_py: C:\Tools\AI\Search\sr.py
+  jeda_detik: 4                         # jeda antar halaman, jangan membombardir situs
+  maks_detail_per_sumber: 25            # batas halaman detail per sumber per run
+  timeout_detik: 240
+
+telegram:
+  maks_item_digest: 15
+
+jadwal: "07:00"                         # jam run harian (disinkronkan ke Task Scheduler kalau sudah terdaftar)
+
+paths:
+  db: db/hasil.sqlite
+  chroma: db/chroma
+  log: logs
+
+showcase:                 # situs publik baca-saja (lihat api/showcase.py)
+  aktif: true             # push snapshot setelah run / Deep Search (api/showcase.py)
+  repo_data: C:\Projects\magang-finder-showcase-data
+  branch: showcase-data
