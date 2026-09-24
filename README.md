@@ -152,6 +152,13 @@ mesin lokal ── mf.py showcase ──▶ branch showcase-data (GitHub) ──
   tiket HMAC sekali pakai kembali ke panel (`MF_JEMBATAN_SECRET`, `MF_EMAIL_IZIN` di `.env`).
   Selama keduanya kosong, panel hanya terbuka dari komputer ini sendiri.
 
+### Menyalakan panel sesuai kebutuhan
+
+Panel tidak menyala otomatis saat Windows hidup. Klik dua kali `Mulai Panel.cmd` untuk
+menyalakan API + web di latar (browser terbuka sendiri) dan `Hentikan Panel.cmd` untuk
+mematikannya. Di baliknya: `scripts/panel.ps1 mulai|berhenti|status`. Web hanya dibangun
+ulang kalau kodenya berubah. Run yang sedang berjalan tidak ikut dimatikan.
+
 ### Keamanan panel kontrol
 
 Diuji dengan serangan nyata terhadap layanan yang berjalan (lihat `tests/test_auth.py`):
