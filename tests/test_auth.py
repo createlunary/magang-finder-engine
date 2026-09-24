@@ -47,7 +47,8 @@ class TestToken(unittest.TestCase):
 
 
 def klien(ip: str) -> TestClient:
-    return TestClient(app, client=(ip, 50000))
+    # base_url menentukan header Host; Penjaga menolak Host berupa nama domain.
+    return TestClient(app, client=(ip, 50000), base_url="http://192.168.1.4:8000")
 
 
 class TestPenjaga(unittest.TestCase):
@@ -77,6 +78,33 @@ class TestPenjaga(unittest.TestCase):
         r = klien("192.168.1.9").get("/settings", headers={"Origin": "http://192.168.1.4:3000"})
         self.assertEqual(r.status_code, 401)
         self.assertEqual(r.headers.get("access-control-allow-origin"), "http://192.168.1.4:3000")
+
+
+class TestKeras(unittest.TestCase):
+    def test_host_sah(self):
+        for h in ("localhost:8000", "127.0.0.1:8000", "192.168.1.4:8000", "[::1]:8000", "10.0.0.2"):
+            self.assertTrue(auth.host_sah(h), h)
+        for h in ("evil.com", "evil.com:8000", "127.0.0.1.nip.io:8000", "localhost.evil.com", "", "8.8.8.8:8000"):
+            self.assertFalse(auth.host_sah(h), h)
+
+    @mock.patch.dict(os.environ, {"MF_JEMBATAN_SECRET": "", "MF_EMAIL_IZIN": ""})
+    def test_dns_rebinding_ditolak_walau_tanpa_login(self):
+        c = TestClient(app, client=("127.0.0.1", 50000), base_url="http://penyerang.example:8000")
+        self.assertEqual(c.get("/settings").status_code, 403)
+
+    @mock.patch.dict(os.environ, ENV)
+    def test_cabut_semua(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(auth, "_berkas_cabut", lambda: Path(d) / "cabut"):
+            auth._tiket_terpakai.clear()
+            sesi = auth.tukar(tiket(jti="c1"))["token"]
+            self.assertIsNotNone(auth.baca(sesi, "sesi"))
+            time.sleep(0.01)
+            auth.cabut_semua()
+            self.assertIsNone(auth.baca(sesi, "sesi"), "sesi lama harus ditolak setelah dicabut")
+            time.sleep(0.01)
+            self.assertIsNotNone(auth.baca(auth.tukar(tiket(jti="c2"))["token"], "sesi"), "login baru tetap bisa")
 
 
 if __name__ == "__main__":

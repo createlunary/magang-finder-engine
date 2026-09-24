@@ -35,6 +35,23 @@ TERBUKA = {"/health", "/auth/tukar", "/auth/status"}
 _tiket_terpakai: dict[str, float] = {}
 
 
+def _berkas_cabut():
+    return config.path("db").parent / "sesi_dicabut_sejak"
+
+
+def dicabut_sejak() -> float:
+    """Token sesi yang terbit sebelum waktu ini ditolak (lihat cabut_semua)."""
+    try:
+        return float(_berkas_cabut().read_text().strip())
+    except (OSError, ValueError):
+        return 0.0
+
+
+def cabut_semua() -> None:
+    """Keluarkan semua perangkat sekaligus — mis. HP hilang atau token dicurigai bocor."""
+    _berkas_cabut().write_text(str(time.time()))
+
+
 def _rahasia() -> bytes | None:
     s = config.env("MF_JEMBATAN_SECRET")
     return s.encode() if s else None
@@ -78,6 +95,8 @@ def baca(token: str, jenis: str) -> dict | None:
         return None
     if str(m.get("email", "")).lower() not in _izin():
         return None
+    if jenis == "sesi" and m.get("iat", 0) < dicabut_sejak():
+        return None
     return m
 
 
@@ -92,7 +111,8 @@ def tukar(tiket: str) -> dict | None:
             del _tiket_terpakai[jti]
     _tiket_terpakai[m["jti"]] = m["exp"]
     exp = int(sekarang + UMUR_SESI)
-    return {"token": tanda({"typ": "sesi", "email": m["email"], "exp": exp, "jti": secrets.token_hex(8)}),
+    return {"token": tanda({"typ": "sesi", "email": m["email"], "iat": sekarang, "exp": exp,
+                            "jti": secrets.token_hex(8)}),
             "email": m["email"], "exp": exp}
 
 
@@ -112,6 +132,21 @@ async def _jawab(send, status: int, detail: str):
     await send({"type": "http.response.body", "body": badan})
 
 
+def host_sah(header_host: str) -> bool:
+    """Header Host harus alamat lokal (localhost / IP privat), bukan nama domain.
+
+    Menangkal DNS rebinding: situs jahat yang dibuka di browser komputer ini bisa
+    mengarahkan domainnya sendiri ke 127.0.0.1/192.168.x.x lalu memanggil API ini
+    sebagai "situs yang sama". Browser tetap mengirim Host = domain penyerang itu.
+    """
+    h = header_host.strip().lower()
+    if h.startswith("["):                                   # IPv6: [::1]:8000
+        h = h[1:h.find("]")] if "]" in h else ""
+    else:
+        h = h.rsplit(":", 1)[0] if h.count(":") == 1 else h
+    return h == "localhost" or ip_lokal(h)
+
+
 class Penjaga:
     """Middleware ASGI murni — bukan BaseHTTPMiddleware, supaya aliran SSE chat dan
     deteksi putusnya koneksi browser (yang menghentikan proses Claude) tetap utuh."""
@@ -125,6 +160,8 @@ class Penjaga:
         host = (scope.get("client") or ("", 0))[0]
         if not ip_lokal(host):
             return await _jawab(send, 403, "Panel kontrol hanya bisa diakses dari jaringan lokal")
+        if not host_sah(dict(scope["headers"]).get(b"host", b"").decode("latin-1")):
+            return await _jawab(send, 403, "Host tidak dikenal")
         if scope["method"] == "OPTIONS" or scope["path"] in TERBUKA:
             return await self.app(scope, receive, send)
         if not aktif():

@@ -152,6 +152,24 @@ mesin lokal ── mf.py showcase ──▶ branch showcase-data (GitHub) ──
   tiket HMAC sekali pakai kembali ke panel (`MF_JEMBATAN_SECRET`, `MF_EMAIL_IZIN` di `.env`).
   Selama keduanya kosong, panel hanya terbuka dari komputer ini sendiri.
 
+### Keamanan panel kontrol
+
+Diuji dengan serangan nyata terhadap layanan yang berjalan (lihat `tests/test_auth.py`):
+
+| Lapisan | Perlindungan |
+|---|---|
+| Jaringan | Hanya klien IP lokal/privat; `X-Forwarded-For` tidak dipercaya (`proxy_headers=False`) |
+| DNS rebinding | Header `Host` wajib localhost/IP privat — domain penyerang yang diarahkan ke IP ini ditolak |
+| Login | Token HMAC-SHA256 (tiket 2 menit sekali pakai → sesi 30 hari), perbandingan waktu-konstan, email daftar izin |
+| Pencabutan | `python mf.py cabut-sesi` (atau `POST /auth/cabut-semua`) mengeluarkan semua perangkat |
+| Jembatan login | Alamat kembali hanya panel sendiri (`MF_PANEL_ASAL` di Vercel), state OAuth di cookie `HttpOnly; Secure` |
+| Claude | Ranking tanpa alat sama sekali; Deep Search & chat hanya WebSearch/WebFetch. Semua memakai `--strict-mcp-config --disable-slash-commands` (tanpa MCP, skill, file, shell), plus aturan anti prompt-injection |
+| Frontend | Tautan dari data luar hanya http/https; `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`; panel dijalankan dalam mode produksi (tanpa endpoint developer) |
+
+Sisa risiko yang diterima: lalu lintas panel di WiFi rumah memakai HTTP biasa (bukan HTTPS),
+dan aturan anti prompt-injection mengurangi tetapi tidak menjamin Claude mengabaikan instruksi
+tersembunyi di halaman lowongan — konteks yang dibawanya tidak memuat kredensial apa pun.
+
 ## Struktur
 
 ```

@@ -611,6 +611,13 @@ def status_login():
     return {"loginAktif": auth.aktif()}
 
 
+@app.post("/auth/cabut-semua")
+def cabut_semua_sesi():
+    """Keluarkan semua perangkat, termasuk yang memanggil ini."""
+    auth.cabut_semua()
+    return {"ok": True}
+
+
 @app.get("/auth/saya")
 def saya():
     """Lolos Penjaga = token sesi masih sah."""

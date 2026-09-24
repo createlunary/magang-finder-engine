@@ -180,6 +180,9 @@ def _via_claude_code(pesan: str, stat: dict) -> DaftarPenilaian | None:
     argv = [exe, "-p", "--output-format", "json",
             "--json-schema", json.dumps(_skema_datar(DaftarPenilaian)),
             "--tools", "",                       # murni penilaian, tanpa akses file/shell
+            # --tools hanya membatasi alat bawaan: tanpa dua flag ini server MCP & skill dari
+            # konfigurasi global ikut termuat. Teks lowongan berasal dari internet (prompt injection).
+            "--strict-mcp-config", "--disable-slash-commands",
             "--model", cc["model"],
             "--no-session-persistence",
             "--system-prompt", _teks_sistem()]

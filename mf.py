@@ -56,6 +56,14 @@ def _sinkron_showcase(pesan: str) -> None:
     logging.getLogger().info(showcase.sinkron(pesan))
 
 
+def cmd_cabut_sesi(a) -> int:
+    """Keluarkan semua perangkat dari panel kontrol (HP hilang, token dicurigai bocor)."""
+    from api import auth
+    auth.cabut_semua()
+    print("semua sesi panel dicabut — setiap perangkat harus login ulang dengan Google")
+    return 0
+
+
 def cmd_showcase(a) -> int:
     from api import showcase
 
@@ -390,6 +398,7 @@ def main() -> int:
     p = sub.add_parser("riset", help="Deep Search: riset kredibilitas perusahaan sebuah lowongan")
     p.add_argument("id", type=int, help="id lowongan (#id di website/Telegram)")
     p.set_defaults(f=cmd_riset)
+    sub.add_parser("cabut-sesi", help="keluarkan semua perangkat dari panel kontrol").set_defaults(f=cmd_cabut_sesi)
     p = sub.add_parser("showcase", help="ekspor data publik ke situs showcase lalu push")
     p.add_argument("--lihat", action="store_true", help="tampilkan ringkasan isi snapshot tanpa menulis")
     p.add_argument("--ekspor", metavar="FILE", help="tulis snapshot ke FILE saja (tanpa git), mis. untuk pratinjau")

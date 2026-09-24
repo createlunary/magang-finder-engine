@@ -18,5 +18,8 @@ sys.path.insert(0, str(ROOT))
 import uvicorn  # noqa: E402
 
 if __name__ == "__main__":
+    # proxy_headers=False: tidak ada reverse proxy di depan API ini, jadi X-Forwarded-For
+    # tidak boleh dipercaya sama sekali untuk menentukan IP klien (dipakai Penjaga).
     uvicorn.run("api.main:app", host="0.0.0.0" if "--lan" in sys.argv else "127.0.0.1", port=8000,
-                reload="--reload" in sys.argv, reload_dirs=["api", "pipeline"])
+                reload="--reload" in sys.argv, reload_dirs=["api", "pipeline"], proxy_headers=False,
+                server_header=False)
